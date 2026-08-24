@@ -31,8 +31,10 @@ export function useSpeechRecognition({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const manuallyStoppedRef = useRef(false);
+const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+const manuallyStoppedRef = useRef(false);
+
+
 
   const clearRecognitionTimeout = () => {
     if (timeoutRef.current) {
@@ -63,11 +65,10 @@ export function useSpeechRecognition({
     if (language === 'hi') {
       recognition.lang = 'hi-IN';
     } else if (language === 'hinglish') {
-      recognition.lang = 'hi-IN';
+      recognition.lang = 'en-IN';
     } else {
       recognition.lang = 'en-IN';
-    }
-
+   }
     recognition.onstart = () => {
       console.log('[Speech] Started');
 
