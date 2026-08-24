@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom soundwave pulse animation */
+@keyframes wave-bar {
+  0%, 100% {
+    height: 6px;
+  }
+  50% {
+    height: 28px;
+  }
+}
+
+.animate-wave-1 {
+  animation: wave-bar 0.8s ease-in-out infinite 0.1s;
+}
+.animate-wave-2 {
+  animation: wave-bar 0.8s ease-in-out infinite 0.3s;
+}
+.animate-wave-3 {
+  animation: wave-bar 0.8s ease-in-out infinite 0.5s;
+}
+.animate-wave-4 {
+  animation: wave-bar 0.8s ease-in-out infinite 0.2s;
+}
+.animate-wave-5 {
+  animation: wave-bar 0.8s ease-in-out infinite 0.4s;
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-panel-dark {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
