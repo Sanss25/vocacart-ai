@@ -257,10 +257,10 @@ def parse_quantity_and_unit(phrase: str) -> Tuple[float, str, str]:
         r"\s+जोड़\s+दे$",
         r"\s+जोड़\s+दो$",
         r"\s+जोड़ो$",
-	r"\s+जोडो$",
-	r"\s+जोड़ो$",
-	r"\s+जोड़\s+दीजिए$",
-	r"\s+जोड़\s+दिया$",
+    r"\s+जोडो$",
+    r"\s+जोड़ो$",
+    r"\s+जोड़\s+दीजिए$",
+    r"\s+जोड़\s+दिया$",
         r"\s+ऐड\s+कर\s+दे$",
         r"\s+ऐड\s+कर\s+दो$",
         r"\s+jod\s+do$",
@@ -612,22 +612,22 @@ def parse_command(raw_text: str, language_hint: str = "auto") -> Dict[str, Any]:
             item_desc = f"{item['quantity']:g} {item['unit']}{'s' if item['quantity'] > 1 and not item['unit'].endswith('s') else ''} of {brand_str}{item['name']}"
             reasoning = f"Parsed single item addition: {item_desc} in '{item['category']}' category."
             if detected_lang == "hi":
-    		hindi_product_names = {
-        		"Milk": "दूध",
-        		"Bread": "ब्रेड",
-        		"Whole Wheat Bread": "होल व्हीट ब्रेड",
-        		"Apples": "सेब",
-    		}
+               hindi_product_names = {
+                "Milk": "दूध",
+                "Bread": "ब्रेड",
+                "Whole Wheat Bread": "होल व्हीट ब्रेड",
+                "Apples": "सेब",
+            }
 
-    		hindi_name = hindi_product_names.get(
-        		item["name"],
-        		item["name"]
-    		)
+               hindi_name = hindi_product_names.get(
+                item["name"],
+                item["name"]
+            )
 
-    		confirmation_message = (
-        		f"{item['quantity']:g} {item['unit']} {hindi_name} जोड़ दिया।"
-    		)
-    		tts_text = confirmation_message
+               confirmation_message = (
+                f"{item['quantity']:g} {item['unit']} {hindi_name} जोड़ दिया।"
+            )
+               tts_text = confirmation_message
 
             elif detected_lang == "hinglish":
                 confirmation_message = (
