@@ -86,6 +86,7 @@ HINDI_VOCAB_MAP = {
     "daal": "Dal", "दाल": "Dal",
     "tel": "Oil", "तेल": "Oil",
     "makhan": "Butter", "मक्खन": "Butter",
+    "butter": "Butter","बटर": "Butter",
     "dahi": "Curd", "दही": "Curd",
     "paneer": "Paneer", "पनीर": "Paneer",
     "ande": "Eggs", "anda": "Egg", "अंडा": "Egg", "अंडे": "Eggs",
@@ -135,22 +136,32 @@ def clean_sentence_preamble(text: str) -> str:
 def clean_sentence_postfix(text: str) -> str:
     """Strip conversational closing phrases."""
     p = re.sub(
-        r"\s+(add\s+kar\s*do|add\s+karo|daal\s+do|daalo|chahiye|bhi\s+daalo|bhi\s+daal\s*do|list\s+mein\s+daal\s*do|list\s+me\s+daal\s*do|to\s+(the\s+)?(shopping\s+)?list|on\s+my\s+list|चाहिए|डाल\s+दो|जोड़ो)$",
-        "",
-        text,
-        flags=re.IGNORECASE
-    )
+    r"(?:add\s+kar\s*do|add\s+karo|ऐड\s+करो|ऐड\s+कर\s+दो|ऐड\s+कर|चाहिए|डाल\s+दो|जोड़\s+दो)$",
+    "",
+    text,
+    flags=re.IGNORECASE
+)
     return p.strip()
 
 
 def parse_quantity_and_unit(phrase: str) -> Tuple[float, str, str]:
     """
-    Given a phrase like '2 packets of Amul milk' or 'a loaf of bread' or 'do kilo chawal' or 'दो किलो चावल',
-    extract (quantity, unit, cleaned_product_name).
+    Extract quantity, unit and product name from English, Hindi and Hinglish
+    shopping commands.
+
+    Examples:
+        '2 packets of Amul milk' -> (2, 'packet', 'Amul milk')
+        'a loaf of bread' -> (1, 'loaf', 'bread')
+        'do kilo chawal' -> (2, 'kg', 'rice')
+        'do dudh ke packet add kar de' -> (2, 'packet', 'milk')
+        'butter add kar de' -> (1, 'piece', 'butter')
     """
+
     phrase = clean_sentence_preamble(phrase)
     phrase = clean_sentence_postfix(phrase)
+
     words = phrase.split()
+
     if not words:
         return 1.0, "piece", phrase
 
@@ -158,45 +169,150 @@ def parse_quantity_and_unit(phrase: str) -> Tuple[float, str, str]:
     unit = "piece"
     idx = 0
 
-    first_word = words[0].lower()
-    # 1. Match first token as number
+    first_word = words[0].lower().strip(".,!?")
+
+    # ---------------------------------------------------------
+    # 1. Extract quantity
+    # ---------------------------------------------------------
     if re.match(r"^\d+(\.\d+)?$", first_word):
         quantity = float(first_word)
         idx = 1
+
     elif first_word in NUMBER_WORDS:
         quantity = NUMBER_WORDS[first_word]
         idx = 1
+
     elif "/" in first_word:
         parts = first_word.split("/")
-        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit() and float(parts[1]) != 0:
+        if (
+            len(parts) == 2
+            and parts[0].isdigit()
+            and parts[1].isdigit()
+            and float(parts[1]) != 0
+        ):
             quantity = float(parts[0]) / float(parts[1])
             idx = 1
 
-    # 2. Check if second word is a unit
+    # ---------------------------------------------------------
+    # 2. Extract unit
+    # ---------------------------------------------------------
     if idx < len(words):
-        second_word = words[idx].lower().rstrip(".,")
-        if second_word in UNIT_MAP:
-            unit = UNIT_MAP[second_word]
+        current_word = words[idx].lower().rstrip(".,!?")
+
+        # Direct unit:
+        # "2 packets milk"
+        # "2 kilo rice"
+        if current_word in UNIT_MAP:
+            unit = UNIT_MAP[current_word]
             idx += 1
-            # Skip optional connector 'of' / 'ka' / 'ki' / 'ke'
-            if idx < len(words) and words[idx].lower() in ["of", "ka", "ki", "ke", "का", "की", "के"]:
-                idx += 1
-        elif second_word in ["of", "का", "की", "के"] and idx == 1:
-            if first_word in UNIT_MAP:
-                unit = UNIT_MAP[first_word]
-                quantity = 1.0
+
+            # Skip connector after unit:
+            # "2 packets of milk"
+            # "2 packets ke milk"
+            if (
+                idx < len(words)
+                and words[idx].lower().rstrip(".,!?")
+                in ["of", "ka", "ki", "ke", "का", "की", "के"]
+            ):
                 idx += 1
 
+        # Connector before unit:
+        # "do dudh ke packet"
+        #             ^ packet
+        elif current_word in ["ka", "ki", "ke", "का", "की", "के"]:
+            connector_idx = idx
+
+            if connector_idx + 1 < len(words):
+                possible_unit = words[connector_idx + 1].lower().rstrip(".,!?")
+
+                if possible_unit in UNIT_MAP:
+                    unit = UNIT_MAP[possible_unit]
+                    idx = connector_idx + 2
+
+    # ---------------------------------------------------------
+    # 3. Remove leading connectors
+    # ---------------------------------------------------------
     remaining_product = " ".join(words[idx:]).strip()
-    remaining_product = re.sub(r"^(of|some|any|a|an|the|ka|ki|ke|का|की|के)\s+", "", remaining_product, flags=re.IGNORECASE)
 
-    # Translate known Hindi grocery words
+    remaining_product = re.sub(
+        r"^(of|some|any|a|an|the|ka|ki|ke|का|की|के)\s+",
+        "",
+        remaining_product,
+        flags=re.IGNORECASE
+    )
+
+    # ---------------------------------------------------------
+    # 4. Remove common Hinglish/Hindi command words
+    #    from the END of the product phrase
+    # ---------------------------------------------------------
+    command_suffixes = [
+        r"\s+add\s+kar\s+de$",
+        r"\s+add\s+kar\s+do$",
+        r"\s+add\s+karo$",
+        r"\s+add\s+kr\s+de$",
+        r"\s+add\s+kr\s+do$",
+        r"\s+kar\s+de$",
+        r"\s+kar\s+do$",
+        r"\s+karo$",
+        r"\s+जोड़\s+दे$",
+        r"\s+जोड़\s+दो$",
+        r"\s+जोड़\s+दीजिए$",
+        r"\s+जोड़\s+दिया$",
+        r"\s+जोड़\s+दो$",
+        r"\s+ऐड\s+कर\s+दे$",
+        r"\s+ऐड\s+कर\s+दो$",
+        r"\s+jod\s+do$",
+        r"\s+jod\s+de$"
+    ]
+
+    for suffix in command_suffixes:
+        remaining_product = re.sub(
+            suffix,
+            "",
+            remaining_product,
+            flags=re.IGNORECASE
+        )
+
+    remaining_product = remaining_product.strip()
+
+    # ---------------------------------------------------------
+    # 5. Translate known Hindi grocery words
+    # ---------------------------------------------------------
     prod_words = remaining_product.split()
-    translated_words = [HINDI_VOCAB_MAP.get(w.lower(), HINDI_VOCAB_MAP.get(w, w)) for w in prod_words]
-    standardized_product = " ".join(translated_words)
+
+    translated_words = [
+    HINDI_VOCAB_MAP.get(
+        w.lower(),
+        HINDI_VOCAB_MAP.get(w, w)
+    )
+    for w in prod_words
+]
+
+    HINGLISH_MAP = {
+    "makkhan": "butter",
+    "makhan": "butter",
+    "doodh": "milk",
+    "dudh": "milk",
+    "dahi": "curd",
+    "chawal": "rice",
+    "cheeni": "sugar",
+    "chini": "sugar",
+    "namak": "salt",
+    "tel": "oil",
+    "seb": "apple",
+    "aam": "mango",
+    "atta": "flour",
+    "aata": "flour",
+}
+
+    translated_words = [
+    HINGLISH_MAP.get(word.lower(), word)
+    for word in translated_words
+]
+
+    standardized_product = " ".join(translated_words).strip()
 
     return quantity, unit, standardized_product
-
 
 def extract_brand_and_attributes(product_str: str) -> Tuple[Optional[str], List[str], str]:
     """Extract known brands, attributes (organic, whole wheat, etc.) and clean product name."""
@@ -493,8 +609,21 @@ def parse_command(raw_text: str, language_hint: str = "auto") -> Dict[str, Any]:
             brand_str = f"{item['brand']} " if item.get("brand") else ""
             item_desc = f"{item['quantity']:g} {item['unit']}{'s' if item['quantity'] > 1 and not item['unit'].endswith('s') else ''} of {brand_str}{item['name']}"
             reasoning = f"Parsed single item addition: {item_desc} in '{item['category']}' category."
-            confirmation_message = f"Added {item_desc} to your shopping list."
-            tts_text = f"Added {item_desc}."
+            if detected_lang == "hi":
+                confirmation_message = (
+        f"{item['quantity']:g} {item['unit']} {item['name']} जोड़ दिया।"
+    )
+                tts_text = confirmation_message
+
+            elif detected_lang == "hinglish":
+                confirmation_message = (
+        f"{item['quantity']:g} {item['unit']} {item['name']} add kar diya."
+    )
+                tts_text = confirmation_message
+
+            else:
+                confirmation_message = f"Added {item_desc} to your shopping list."
+                tts_text = f"Added {item_desc}."
         else:
             items_desc = ", ".join([f"{it['quantity']:g} {it['name']}" for it in extracted_items])
             reasoning = f"Parsed multi-item addition ({len(extracted_items)} items): {items_desc}."
