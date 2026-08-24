@@ -612,10 +612,22 @@ def parse_command(raw_text: str, language_hint: str = "auto") -> Dict[str, Any]:
             item_desc = f"{item['quantity']:g} {item['unit']}{'s' if item['quantity'] > 1 and not item['unit'].endswith('s') else ''} of {brand_str}{item['name']}"
             reasoning = f"Parsed single item addition: {item_desc} in '{item['category']}' category."
             if detected_lang == "hi":
-                confirmation_message = (
-        f"{item['quantity']:g} {item['unit']} {item['name']} जोड़ दिया।"
-    )
-                tts_text = confirmation_message
+    		hindi_product_names = {
+        		"Milk": "दूध",
+        		"Bread": "ब्रेड",
+        		"Whole Wheat Bread": "होल व्हीट ब्रेड",
+        		"Apples": "सेब",
+    		}
+
+    		hindi_name = hindi_product_names.get(
+        		item["name"],
+        		item["name"]
+    		)
+
+    		confirmation_message = (
+        		f"{item['quantity']:g} {item['unit']} {hindi_name} जोड़ दिया।"
+    		)
+    		tts_text = confirmation_message
 
             elif detected_lang == "hinglish":
                 confirmation_message = (
