@@ -3,6 +3,14 @@
 > A production-quality, voice-driven supermarket shopping assistant featuring multilingual natural language understanding (English, हिन्दी, Hinglish), explainable smart restock recommendations, automatic category classification, substitute suggestions for unavailable items, and a dedicated in-store Shopping Session Mode.
 
 ---
+## 🚀 Live Demo
+
+**Frontend:** https://vocacart-ai-1.onrender.com
+
+**Backend API:** https://vocacart-ai.onrender.com
+
+**API Docs:** https://vocacart-ai.onrender.com/docs
+
 
 ## Architecture Overview
 
